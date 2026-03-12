@@ -306,6 +306,7 @@
   }
   .status-msg.success { background: var(--success-light); color: var(--success); display: block; }
   .status-msg.error { background: var(--danger-light); color: var(--danger); display: block; }
+  .status-msg.info { background: var(--accent-light); color: var(--accent-dark); display: block; }
 
   .error-box {
     display: none;
@@ -336,7 +337,7 @@
   <div class="card">
     <div class="card-label">Your Idea</div>
     <textarea id="brainDump" placeholder="Describe your idea freely — what problem does it solve, how do you imagine it working, which process or SAP area is affected? Which plant or team? Any rough sense of scope? No need to structure it."></textarea>
-    <p class="input-hint">Examples: automate a manual step, SAP config gap, production planning issue, new integration, reporting need, workcenter change impact...</p>
+    <p class="input-hint">Examples: automate a manual step, SAP config gap, production planning issue, new integration, reporting need, workcenter change impact... · <strong>Ctrl + Enter</strong> to analyse</p>
     <div class="btn-row">
       <button class="btn btn-primary" id="analyseBtn" onclick="runAnalysis()">✦ Analyse Idea</button>
     </div>
@@ -436,6 +437,10 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   let currentAnalysis = null;
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') runAnalysis();
+  });
 
   const SYSTEM_PROMPT = `You are a senior SAP S/4HANA and production planning expert who evaluates ideas critically and honestly. Your role is NOT to be encouraging — your role is to give a realistic, rigorous assessment that saves the team time and money by catching weak ideas early and sharpening strong ones.
 
@@ -634,19 +639,17 @@ Context: This is for the SAP CoE PP & Automation team at Weidmann Group, a manuf
       stepsText
     ].join('\n');
 
-    const effortToPriority = { S: 'P4', M: 'P3', L: 'P2', XL: 'P1' };
+    // Copy full analysis to clipboard
+    navigator.clipboard.writeText(fullText).catch(() => {});
 
-    const baseUrl = 'https://weidmanngroup.sharepoint.com/sites/SAP_CoE_Operations-SAPCoEPP-AutomationService/_layouts/15/listform.aspx?PageType=8&ListId=%7BDD2CF5AC-5A89-43EB-A22D-3835A5BEAC06%7D&RootFolder=&Source=https%3A%2F%2Fweidmanngroup.sharepoint.com%2Fsites%2FSAP_CoE_Operations-SAPCoEPP-AutomationService%2FLists%2FSAP%2520PP%2520%2520Automation%2520Request%2FAllItems.aspx&ContentTypeId=0x0100AE44F8F87C77EB4C98DDAD5CBBF5EA94';
+    // Open the SharePoint new form in a new tab
+    const newFormUrl = 'https://weidmanngroup.sharepoint.com/sites/SAP_CoE_Operations-SAPCoEPP-AutomationService/Lists/SAP%20PP%20%26%20Automation%20Request/newform.aspx';
+    window.open(newFormUrl, '_blank');
 
-    const params = new URLSearchParams({
-      Title: currentAnalysis.title,
-      Request: fullText,
-      ServiceCategory: 'Idea / Feasibility analysis',
-      Priority: effortToPriority[currentAnalysis.effort] || 'P3',
-      Status: 'New Idea'
-    });
-
-    window.open(`${baseUrl}&${params.toString()}`, '_blank');
+    // Show instruction to user
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.textContent = '📋 Analysis copied to clipboard — paste it into the Request field in the form that just opened. Set Service Category to "Idea / Feasibility".';
+    statusMsg.className = 'status-msg info';
 
     const statusMsg = document.getElementById('statusMsg');
     statusMsg.textContent = '→ SharePoint form opened in a new tab. Review and click Save there.';
