@@ -605,92 +605,52 @@ Context: This is for the SAP CoE PP & Automation team at Weidmann Group, a manuf
     }
   }
 
-  async function saveToList() {
+  function saveToList() {
     if (!currentAnalysis) return;
-    const saveBtn = document.getElementById('saveBtn');
+
+    const brainDump = document.getElementById('brainDump').value.trim();
+    const wtdn = currentAnalysis.what_to_do_now;
+    const stepsText = (wtdn?.steps || []).map((s, i) => `${i+1}. ${s.title}: ${s.description}`).join('\n');
+
+    const fullText = [
+      '[BRAIN DUMP]',
+      brainDump,
+      '',
+      '[AI ANALYSIS]',
+      currentAnalysis.summary,
+      '',
+      `Feasibility: ${currentAnalysis.feasibility_score}/5 — ${currentAnalysis.feasibility_label}`,
+      `Effort: ${currentAnalysis.effort} (${currentAnalysis.effort_label})`,
+      `Value Potential: ${currentAnalysis.value_score}/5 — ${currentAnalysis.value_label}`,
+      `Verdict: ${currentAnalysis.verdict}`,
+      '',
+      '[RISKS & BLOCKERS]',
+      (currentAnalysis.key_risks || []).map(r => '• ' + r).join('\n'),
+      '',
+      '[CONDITIONS FOR SUCCESS]',
+      (currentAnalysis.conditions_for_success || []).map(c => '• ' + c).join('\n'),
+      '',
+      '[WHAT TO DO NOW]',
+      stepsText
+    ].join('\n');
+
+    const effortToPriority = { S: 'P4', M: 'P3', L: 'P2', XL: 'P1' };
+
+    const baseUrl = 'https://weidmanngroup.sharepoint.com/sites/SAP_CoE_Operations-SAPCoEPP-AutomationService/_layouts/15/listform.aspx?PageType=8&ListId=%7BDD2CF5AC-5A89-43EB-A22D-3835A5BEAC06%7D&RootFolder=&Source=https%3A%2F%2Fweidmanngroup.sharepoint.com%2Fsites%2FSAP_CoE_Operations-SAPCoEPP-AutomationService%2FLists%2FSAP%2520PP%2520%2520Automation%2520Request%2FAllItems.aspx&ContentTypeId=0x0100AE44F8F87C77EB4C98DDAD5CBBF5EA94';
+
+    const params = new URLSearchParams({
+      Title: currentAnalysis.title,
+      Request: fullText,
+      ServiceCategory: 'Idea / Feasibility',
+      Priority: effortToPriority[currentAnalysis.effort] || 'P3',
+      Status: 'New Idea'
+    });
+
+    window.open(`${baseUrl}&${params.toString()}`, '_blank');
+
     const statusMsg = document.getElementById('statusMsg');
-    saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Saving...';
-
-    try {
-      const digestResp = await fetch(`${SP_SITE}/_api/contextinfo`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json;odata=nometadata',
-          'Content-Type': 'application/json;odata=nometadata'
-        },
-        credentials: 'include'
-      });
-      if (!digestResp.ok) throw new Error('Could not get SharePoint context. Make sure you are logged into SharePoint.');
-      const digestData = await digestResp.json();
-      const digest = digestData.FormDigestValue;
-
-      const effortToPriority = { S: 'P4', M: 'P3', L: 'P2', XL: 'P1' };
-      const brainDump = document.getElementById('brainDump').value.trim();
-
-      const wtdn = currentAnalysis.what_to_do_now;
-      const stepsText = (wtdn?.steps || []).map((s, i) => `${i+1}. ${s.title}: ${s.description}`).join('\n');
-
-      const fullText = [
-        '[BRAIN DUMP]',
-        brainDump,
-        '',
-        '[AI ANALYSIS]',
-        currentAnalysis.summary,
-        '',
-        `Feasibility: ${currentAnalysis.feasibility_score}/5 — ${currentAnalysis.feasibility_label}`,
-        `Effort: ${currentAnalysis.effort} (${currentAnalysis.effort_label})`,
-        `Value Potential: ${currentAnalysis.value_score}/5 — ${currentAnalysis.value_label}`,
-        `Verdict: ${currentAnalysis.verdict}`,
-        '',
-        '[RISKS & BLOCKERS]',
-        (currentAnalysis.key_risks || []).map(r => '• ' + r).join('\n'),
-        '',
-        '[CONDITIONS FOR SUCCESS]',
-        (currentAnalysis.conditions_for_success || []).map(c => '• ' + c).join('\n'),
-        '',
-        '[WHAT TO DO NOW]',
-        stepsText
-      ].join('\n');
-
-      const item = {
-        [SP_FIELDS.title]: currentAnalysis.title,
-        [SP_FIELDS.request]: fullText,
-        [SP_FIELDS.category]: 'Idea / Feasibility',
-        [SP_FIELDS.priority]: effortToPriority[currentAnalysis.effort] || 'P3',
-        [SP_FIELDS.status]: 'New Idea'
-      };
-
-      const postResp = await fetch(
-        `${SP_SITE}/_api/web/lists/getbytitle('${SP_LIST}')/items`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json;odata=nometadata',
-            'Content-Type': 'application/json;odata=nometadata',
-            'X-RequestDigest': digest
-          },
-          credentials: 'include',
-          body: JSON.stringify(item)
-        }
-      );
-
-      if (!postResp.ok) {
-        const errData = await postResp.json().catch(() => ({}));
-        const msg = errData?.['odata.error']?.message?.value || `HTTP ${postResp.status}`;
-        throw new Error(msg);
-      }
-
-      statusMsg.textContent = '✓ Saved to SAP PP & Automation Request list.';
-      statusMsg.className = 'status-msg success';
-      saveBtn.textContent = '✓ Saved';
-
-    } catch (err) {
-      statusMsg.textContent = '✗ Save failed: ' + err.message;
-      statusMsg.className = 'status-msg error';
-      saveBtn.disabled = false;
-      saveBtn.textContent = '📋 Save to PP&A Request List';
-    }
+    statusMsg.textContent = '→ SharePoint form opened in a new tab. Review and click Save there.';
+    statusMsg.className = 'status-msg info';
   }
 
   function resetForm() {
