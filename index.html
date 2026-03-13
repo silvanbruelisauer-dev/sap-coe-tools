@@ -193,6 +193,37 @@
     gap: 12px;
     margin-bottom: 20px;
   }
+  @media print {
+    body { background: #fff; padding: 0; font-size: 12px; }
+    .header, #inputCard, #loading, #errorBox, .btn-row, .status-msg { display: none !important; }
+    .card.result { display: block !important; border: none; padding: 0; margin: 0; box-shadow: none; }
+    .card-label { font-size: 10px; }
+    .result-title { font-size: 15px; }
+    .result-summary { font-size: 12px; border-left: 3px solid #007a6e; }
+    .score-grid { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .score-cell { border: 1px solid #ddd; padding: 10px; }
+    .wtdn-card { border: 1px solid #ddd; }
+    .wtdn-header { background: #1a1d26 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .step-num { background: #007a6e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .dot.filled { background: #007a6e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .dot.filled.low { background: #991b1b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .dot.filled.mid { background: #b45309 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .dot.filled.high { background: #166534 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .verdict-recommended { background: #dcfce7 !important; color: #166534 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .verdict-review { background: #fef3c7 !important; color: #b45309 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .verdict-not { background: #fee2e2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .result-summary { background: #e6f4f3 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .print-footer { display: block !important; }
+  }
+  .print-footer {
+    display: none;
+    font-size: 10px;
+    color: #6b7280;
+    margin-top: 24px;
+    border-top: 1px solid #dde1e9;
+    padding-top: 8px;
+  }
+
   @media (max-width: 560px) {
     .score-grid { grid-template-columns: 1fr 1fr; }
   }
@@ -334,7 +365,7 @@
 
 
   <!-- Input card -->
-  <div class="card">
+  <div class="card" id="inputCard">
     <div class="card-label">Your Idea</div>
     <textarea id="brainDump" placeholder="Describe your idea freely — what problem does it solve, how do you imagine it working, which process or SAP area is affected? Which plant or team? Any rough sense of scope? No need to structure it."></textarea>
     <p class="input-hint">Examples: automate a manual step, SAP config gap, production planning issue, new integration, reporting need, workcenter change impact... · <strong>Ctrl + Enter</strong> to analyse</p>
@@ -415,9 +446,11 @@
 
     <div class="btn-row">
       <button class="btn btn-save" id="saveBtn" onclick="saveToList()">📋 Save to PP&A Request List</button>
+      <button class="btn btn-secondary" onclick="printToPDF()">🖨 Print to PDF</button>
       <button class="btn btn-secondary" onclick="resetForm()">↺ New Idea</button>
     </div>
     <div class="status-msg" id="statusMsg"></div>
+    <div class="print-footer" id="printFooter"></div>
   </div>
 
 </div>
@@ -643,13 +676,20 @@ Context: This is for the SAP CoE PP & Automation team at Weidmann Group, a manuf
     navigator.clipboard.writeText(fullText).catch(() => {});
 
     // Open the SharePoint new form in a new tab
-    const newFormUrl = 'https://weidmanngroup.sharepoint.com/sites/SAP_CoE_Operations-SAPCoEPP-AutomationService/Lists/SAP%20PP%20%26%20Automation%20Request/newform.aspx';
+    const newFormUrl = 'https://weidmanngroup.sharepoint.com/sites/SAP_CoE_Operations-SAPCoEPP-AutomationService/_layouts/15/listform.aspx?PageType=8&ListId=%7BDD2CF5AC-5A89-43EB-A22D-3835A5BEAC06%7D&RootFolder=&Source=https%3A%2F%2Fweidmanngroup.sharepoint.com%2Fsites%2FSAP_CoE_Operations-SAPCoEPP-AutomationService%2FLists%2FSAP%2520PP%2520%2520Automation%2520Request%2FAllItems.aspx&ContentTypeId=0x0100AE44F8F87C77EB4C98DDAD5CBBF5EA94';
     window.open(newFormUrl, '_blank');
 
     // Show instruction to user
     const statusMsg = document.getElementById('statusMsg');
-    statusMsg.textContent = '📋 Analysis copied to clipboard — paste it into the Request field in the form that just opened. Set Service Category to "Idea / Feasibility".';
+    statusMsg.textContent = '📋 Analysis copied to clipboard. In the form: 1) set Title to "' + currentAnalysis.title + '" 2) set Service Category to "Idea / Feasibility" 3) paste clipboard into the Request field.';
     statusMsg.className = 'status-msg info';
+  }
+
+  function printToPDF() {
+    if (!currentAnalysis) return;
+    const footer = document.getElementById('printFooter');
+    footer.textContent = 'SAP CoE PP & Automation — Idea Feasibility Analysis · Generated ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    window.print();
   }
 
   function resetForm() {
